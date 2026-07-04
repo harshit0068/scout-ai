@@ -1,12 +1,11 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.5-flash")
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def evaluate_post(text):
     prompt = f"""You are a lead-qualification analyst for a freelance design/development agency.
@@ -26,7 +25,11 @@ Post:
 {text}
 """
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
+
     raw_text = response.text.strip()
     raw_text = raw_text.replace("```json", "").replace("```", "").strip()
 
