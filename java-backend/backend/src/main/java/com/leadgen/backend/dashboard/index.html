@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scout — Signal Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #0D1117;
+    --panel: #151B23;
+    --steel: #2A323D;
+    --signal: #E8A33D;
+    --cold: #5B9BD5;
+    --ash: #C9D1D9;
+    --dim: #6B7684;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--void);
+    color: var(--ash);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--steel);
+    padding: 20px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: var(--void);
+    z-index: 10;
+  }
+
+  .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--signal);
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.5); }
+    50% { opacity: 0.5; box-shadow: 0 0 0 6px rgba(232, 163, 61, 0); }
+  }
+
+  .status-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--dim);
+    text-align: right;
+  }
+
+  .status-line span { color: var(--signal); }
+
+  main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .controls input, .controls select {
+    background: var(--panel);
+    border: 1px solid var(--steel);
+    color: var(--ash);
+    padding: 9px 14px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+  }
+
+  .controls input { flex: 1; }
+  .controls input::placeholder { color: var(--dim); }
+  .controls input:focus, .controls select:focus {
+    outline: none;
+    border-color: var(--signal);
+  }
+
+  .controls button {
+    background: transparent;
+    border: 1px solid var(--steel);
+    color: var(--ash);
+    padding: 9px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+  }
+
+  .controls button:hover { border-color: var(--signal); color: var(--signal); }
+
+  .transmission {
+    background: var(--panel);
+    border: 1px solid var(--steel);
+    border-left: 2px solid var(--signal);
+    border-radius: 0 8px 8px 0;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+    transition: border-color 0.15s ease;
+  }
+
+  .transmission:hover { border-color: var(--steel); border-left-color: var(--cold); }
+
+  .t-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+
+  .t-id { color: var(--signal); }
+  .t-author { color: var(--ash); font-weight: 500; }
+  .t-source {
+    margin-left: auto;
+    color: var(--cold);
+    text-decoration: none;
+  }
+  .t-source:hover { text-decoration: underline; }
+
+  .t-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ash);
+    max-height: 4.8em;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .t-text.expanded { max-height: none; }
+
+  .t-expand {
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 8px 0 0;
+  }
+
+  .t-expand:hover { color: var(--signal); }
+
+  .empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">
+    <span class="live-dot"></span>
+    SCOUT
+  </div>
+  <div class="status-line">
+    <div id="count">— signals</div>
+    <div>last sync <span id="last-sync">—</span></div>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Filter by author or keyword...">
+    <select id="sort">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="author">By author</option>
+    </select>
+    <button onclick="loadLeads()">Refresh</button>
+  </div>
+
+  <div id="feed"></div>
+</main>
+
+<script>
+  const API_URL = "http://localhost:8080/api/leads";
+  let allLeads = [];
+
+  function decodeEntities(text) {
+    const el = document.createElement("textarea");
+    el.innerHTML = text;
+    return el.value;
+  }
+
+  function stripHtml(text) {
+    return text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  async function loadLeads() {
+    const feed = document.getElementById("feed");
+    feed.innerHTML = '<div class="empty">Scanning...</div>';
+
+    try {
+      const res = await fetch(API_URL);
+      allLeads = await res.json();
+      document.getElementById("last-sync").textContent =
+        new Date().toLocaleTimeString();
+      render();
+    } catch (e) {
+      feed.innerHTML = '<div class="empty">Can\'t reach the backend.<br>Is it running on :8080?</div>';
+      console.error(e);
+    }
+  }
+
+  function render() {
+    const query = document.getElementById("search").value.toLowerCase();
+    const sortBy = document.getElementById("sort").value;
+    const feed = document.getElementById("feed");
+
+    let list = allLeads.filter(lead =>
+      lead.author.toLowerCase().includes(query) ||
+      lead.text.toLowerCase().includes(query)
+    );
+
+    if (sortBy === "oldest") list = [...list].reverse();
+    if (sortBy === "author") list = [...list].sort((a, b) => a.author.localeCompare(b.author));
+
+    document.getElementById("count").textContent = `${allLeads.length} signal${allLeads.length !== 1 ? "s" : ""}`;
+
+    if (list.length === 0) {
+      feed.innerHTML = '<div class="empty">No signals match this filter.</div>';
+      return;
+    }
+
+    feed.innerHTML = list.map(lead => {
+      const cleanText = decodeEntities(stripHtml(lead.text));
+      const idTag = String(lead.id).padStart(3, "0");
+      return `
+        <div class="transmission">
+          <div class="t-meta">
+            <span class="t-id">#${idTag}</span>
+            <span class="t-author">${lead.author}</span>
+            <a class="t-source" href="${lead.url}" target="_blank">source ↗</a>
+          </div>
+          <div class="t-text" id="text-${lead.id}">${cleanText}</div>
+          <button class="t-expand" onclick="toggleExpand(${lead.id})">expand ▾</button>
+        </div>`;
+    }).join("");
+  }
+
+  function toggleExpand(id) {
+    document.getElementById(`text-${id}`).classList.toggle("expanded");
+  }
+
+  document.getElementById("search").addEventListener("input", render);
+  document.getElementById("sort").addEventListener("change", render);
+
+  loadLeads();
+</script>
+
+</body>
+</html>
