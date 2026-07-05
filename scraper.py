@@ -16,13 +16,15 @@ keywords = [
     "contractor"
 ]
 
+SOURCE_NAME = "Hacker News"
+
 def run_scan_cycle():
-    print("\n--- Starting new scan cycle ---")
+    print(f"\n--- Scanning {SOURCE_NAME} ---")
 
     response = requests.get("https://hacker-news.firebaseio.com/v0/newstories.json")
     story_ids = response.json()
 
-    matches = []
+    genuine_count = 0
 
     for story_id in story_ids[:100]:
         post_response = requests.get(f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json")
@@ -34,26 +36,38 @@ def run_scan_cycle():
 
         for keyword in keywords:
             if keyword in full_text:
-                clean_post = {
-                    "author": post_data.get("by"),
-                    "url": f"https://news.ycombinator.com/item?id={post_data.get('id')}",
-                    "text": title + " " + text
-                }
+                author = post_data.get("by", "unknown")
+                url = f"https://news.ycombinator.com/item?id={post_data.get('id')}"
+                combined_text = title + " " + text
 
-                ai_result = evaluate_post(clean_post["text"])
-                print(f"AI verdict: {ai_result}")
+                try:
+                    ai_result = evaluate_post(combined_text)
+                    print(f"AI verdict: {ai_result}")
 
-                if ai_result["is_genuine_lead"]:
-                    insert_lead(clean_post["author"], clean_post["url"], clean_post["text"])
-                    matches.append(clean_post)
+                    insert_lead(
+                        source=SOURCE_NAME,
+                        author=author,
+                        url=url,
+                        text=combined_text,
+                        is_genuine=ai_result["is_genuine_lead"],
+                        confidence_score=ai_result["confidence_score"],
+                        summary=ai_result["summary"]
+                    )
 
+                    if ai_result["is_genuine_lead"]:
+                        genuine_count += 1
+
+                except Exception as e:
+                    print(f"AI call failed, skipping this post: {e}")
+
+                time.sleep(13)
                 break
 
-    print(f"--- Cycle complete: {len(matches)} genuine leads found ---\n")
+    print(f"--- {SOURCE_NAME} cycle complete: {genuine_count} genuine leads found ---\n")
 
 
 if __name__ == "__main__":
     while True:
         run_scan_cycle()
         print("Sleeping for 5 minutes...")
-        time.sleep(300)  # 300 seconds = 5 minutes
+        time.sleep(300)
