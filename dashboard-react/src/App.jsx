@@ -4,7 +4,7 @@ import Controls from './components/Controls'
 import IntelBar from './components/IntelBar'
 import LeadCard from './components/LeadCard'
 
-const API_BASE = 'http://localhost:8080/api/leads'
+const API_BASE = 'https://scout-ai-backend-07sn.onrender.com/api/leads'
 
 function App() {
   const [leads, setLeads] = useState([])
