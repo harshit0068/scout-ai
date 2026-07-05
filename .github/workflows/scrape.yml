@@ -31,6 +31,6 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add leads.db
+          git add -f leads.db
           git commit -m "Automated scan update" || echo "No changes to commit"
           git push
