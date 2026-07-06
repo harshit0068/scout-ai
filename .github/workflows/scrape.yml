@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests google-genai python-dotenv
+        run: pip install requests groq python-dotenv
 
       - name: Run scraper (single cycle, not the infinite loop)
         env:
