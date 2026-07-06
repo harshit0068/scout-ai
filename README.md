@@ -8,11 +8,9 @@ or laptop needing to stay on.
 **Live dashboard:** [https://scout-ai-tawny-five.vercel.app/](#)
 **Live API:** [https://scout-ai-backend-07sn.onrender.com](#)
 
----
-
 ## How it works
 Hacker News API ─┐
-├─► Python Scraper ─► Gemini AI Classifier ─► SQLite DB
+├─► Python Scraper ─► Groq AI Classifier ─► SQLite DB
 RemoteOK API ───┘ │
 ▼
 Java Spring Boot API
@@ -24,9 +22,9 @@ React Dashboard (live)
 
 1. **The Scraper (Python)** polls Hacker News and RemoteOK for posts matching
    hiring/freelance keywords.
-2. **The Brain (Gemini AI)** reads each candidate post and judges whether it's a
-   genuine buying-intent lead or just noise (job seekers, self-promotion, venting) —
-   returning a confidence score and a one-line summary.
+2. **The Brain (Groq / Llama 3.1)** reads each candidate post and judges whether
+   it's a genuine buying-intent lead or just noise (job seekers, self-promotion,
+   venting) — returning a confidence score and a one-line summary.
 3. **The Database (SQLite)** stores every scanned post — not just the genuine
    ones — tagged by source. This is what powers the signal-quality tracking below.
 4. **The Backend (Java / Spring Boot)** exposes a REST API over that data, with
@@ -59,7 +57,7 @@ it tells you which ones are actually worth your time.
 | Layer | Tech |
 |---|---|
 | Scraper | Python, `requests` |
-| AI Classification | Google Gemini (`gemini-2.5-flash-lite`) |
+| AI Classification | Groq (`llama-3.1-8b-instant`) |
 | Database | SQLite |
 | Backend API | Java 23, Spring Boot 4, Spring Data JPA |
 | Frontend | React 19 (Vite), custom CSS |
@@ -78,10 +76,10 @@ SQLite is created automatically on first run — no setup needed.
 cd (repo root)
 python -m venv venv
 venv\Scripts\activate       # Windows
-pip install requests google-genai python-dotenv
+pip install requests groq python-dotenv
 ```
 Create a `.env` file:
-GEMINI_API_KEY=your_key_here
+GROQ_API_KEY=your_key_here
 
 
 Run a single scan cycle:
@@ -109,15 +107,18 @@ Runs on `http://localhost:5173`, reading from `localhost:8080` by default
 
 ## Known limitations (and why)
 
-- **Gemini free-tier quota (~20 requests/day)** significantly limits how many
-  posts can be classified per day. In production, this would move to a paid
-  tier or a queued/batched classification approach. This is why lead volume
-  is currently low — it's a quota constraint, not a pipeline failure.
+- ~~Gemini free-tier quota (~20 requests/day)~~ — **resolved.** The pipeline
+  originally used Google's Gemini API, but its free tier capped classification
+  at just 20 requests/day, which the pipeline's normal match volume exceeded
+  within a single scan cycle. Migrated to **Groq** (`llama-3.1-8b-instant`),
+  whose free tier allows 14,400 requests/day — a ~700x increase — which fully
+  removed this bottleneck.
 - **SQLite is baked into the Docker image at deploy time**, not read live from
   a network database. Render's auto-deploy-on-commit means new data does
   eventually reach the live site, but a proper production version would use a
   hosted Postgres instance shared directly between the Python scraper and the
-  Java backend.
+  Java backend. This would also eliminate the merge-conflict risk that comes
+  with committing a binary database file alongside automated commits.
 - **RemoteOK is kept in the codebase deliberately**, despite its low signal
   quality, as a demonstration of the pipeline's multi-source extensibility and
   of the signal-quality measurement feature itself.
@@ -127,15 +128,15 @@ Runs on `http://localhost:5173`, reading from `localhost:8080` by default
 ## What I'd build next
 
 - Migrate to a hosted Postgres database, removing the Docker-rebuild dependency
+  and the binary-file merge-conflict risk
 - Add a feedback loop: let a human mark leads as good/bad, and use that to
   refine the AI prompt over time
 - Add a third source (Reddit, once developer API access is approved) now that
   the pipeline is proven to support multiple sources cleanly
-Step 3: Fill in your actual live URLs
-Replace the two placeholder links near the top with your real Vercel and Render URLs.
+Replace your .env fill-in URLs at the top with your real Vercel and Render links. Save, then:
 
-Step 4: Save, commit, push
 
 git add README.md
-git commit -m "Add project README"
+git commit -m "Update README to reflect Gemini to Groq migration"
+git pull origin main
 git push
