@@ -22,7 +22,7 @@ jobs:
 
       - name: Run scraper (single cycle, not the infinite loop)
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           python -c "from scraper import run_scan_cycle; run_scan_cycle()"
           python -c "from remoteok_scraper import scan_remoteok; scan_remoteok()"

@@ -1,11 +1,11 @@
 import os
 import json
-from google import genai
+from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 def evaluate_post(text):
     prompt = f"""You are a lead-qualification analyst for a freelance design/development agency.
@@ -25,17 +25,17 @@ Post:
 {text}
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash-lite",
-        contents=prompt
-    )
-
-    raw_text = response.text.strip()
-    raw_text = raw_text.replace("```json", "").replace("```", "").strip()
-
     try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+        )
+        raw_text = response.choices[0].message.content.strip()
+        raw_text = raw_text.replace("```json", "").replace("```", "").strip()
         result = json.loads(raw_text)
-    except:
+    except Exception as e:
+        print(f"[ai_evaluator] classification failed, defaulting to non-lead: {e}")
         result = {"is_genuine_lead": False, "confidence_score": 0.0, "summary": ""}
 
     return result

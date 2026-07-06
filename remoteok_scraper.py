@@ -55,7 +55,7 @@ def scan_remoteok():
             except Exception as e:
                 print(f"AI call failed, skipping this post: {e}")
 
-            time.sleep(13)
+            time.sleep(2)
 
     print(f"--- {SOURCE_NAME} cycle complete: {genuine_count} genuine leads found ---\n")
 

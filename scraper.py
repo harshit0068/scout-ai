@@ -60,7 +60,7 @@ def run_scan_cycle():
                 except Exception as e:
                     print(f"AI call failed, skipping this post: {e}")
 
-                time.sleep(13)
+                time.sleep(2)
                 break
 
     print(f"--- {SOURCE_NAME} cycle complete: {genuine_count} genuine leads found ---\n")
@@ -70,4 +70,4 @@ if __name__ == "__main__":
     while True:
         run_scan_cycle()
         print("Sleeping for 5 minutes...")
-        time.sleep(300)
+        time.sleep(2)
